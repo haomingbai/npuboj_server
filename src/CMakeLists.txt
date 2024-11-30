@@ -1,0 +1,1 @@
+add_executable(npuboj_server main.cpp)
