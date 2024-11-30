@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/home/haomingbai/npuboj/npuboj_server/build",
-  "command": "/usr/bin/c++   -g -o CMakeFiles/npuboj_server.dir/main.cpp.o -c /home/haomingbai/npuboj/npuboj_server/src/main.cpp",
-  "file": "/home/haomingbai/npuboj/npuboj_server/src/main.cpp",
-  "output": "CMakeFiles/npuboj_server.dir/main.cpp.o"
-}
-]

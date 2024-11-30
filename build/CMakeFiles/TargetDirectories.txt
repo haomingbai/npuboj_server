@@ -1,3 +1,0 @@
-/home/haomingbai/npuboj/npuboj_server/build/CMakeFiles/npuboj_server.dir
-/home/haomingbai/npuboj/npuboj_server/build/CMakeFiles/edit_cache.dir
-/home/haomingbai/npuboj/npuboj_server/build/CMakeFiles/rebuild_cache.dir

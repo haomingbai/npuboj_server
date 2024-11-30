@@ -1,1 +1,0 @@
-/usr/bin/c++ -g -rdynamic -Wl,--dependency-file,CMakeFiles/npuboj_server.dir/link.d CMakeFiles/npuboj_server.dir/main.cpp.o -o npuboj_server
