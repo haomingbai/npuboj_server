@@ -1,6 +1,5 @@
-build
-.vscode
-*/build
-*/.vscode
-*/build/*
-*/.vscode/*
+# Ignore all build folders
+build/
+
+# Ignore .vscode folder
+.vscode/
