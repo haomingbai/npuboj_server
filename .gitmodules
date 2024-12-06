@@ -1,3 +1,6 @@
 [submodule "third_party/sandboxed-api"]
 	path = third_party/sandboxed-api
 	url = https://github.com/google/sandboxed-api.git
+[submodule "third_party/abseil-cpp"]
+	path = third_party/abseil-cpp
+	url = https://github.com/abseil/abseil-cpp.git
