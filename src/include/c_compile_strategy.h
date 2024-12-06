@@ -21,8 +21,8 @@ class CCompilerStrategy : public SimpleCompileStrategy
     CCompilerStrategy(std::string &path, std::string &cc);
     virtual ~CCompilerStrategy() = default;
 
-    virtual std::vector<Result> &&compile(const std::string &src, const std::vector<std::string> &input, const Limitation &limitation) override;
-    virtual std::vector<int> &&compile(const std::string &src, const std::vector<std::string> &input,
+    virtual std::vector<Result> compile(const std::string &src, const std::vector<std::string> &input, const Limitation &limitation) override;
+    virtual std::vector<int> compile(const std::string &src, const std::vector<std::string> &input,
                                         const std::vector<std::string> &output, const Limitation &limitation) override;
 };
 } // namespace npuboj

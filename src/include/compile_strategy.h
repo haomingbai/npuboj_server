@@ -18,7 +18,7 @@ class CompileStrategy
     /// of the program in one execution.
     /// @return The stdout of the program, with each input in the vector input, there will be a corresponding output in
     /// the return value
-    virtual std::vector<Result> &&compile(const std::string &src, const std::vector<std::string> &input, const Limitation &limitation) = 0;
+    virtual std::vector<Result> compile(const std::string &src, const std::vector<std::string> &input, const Limitation &limitation) = 0;
     /// @brief Compile, run and judge the output of the program
     /// @param src The source code of the program.
     /// @param input The standard input of the program, in one time of execution, the program will read one string from
@@ -27,7 +27,7 @@ class CompileStrategy
     /// judged by the corresponding string in the output vector.
     /// @return The result of the judgement, each element in the vector is a boolean value, true means the output is
     /// correct, false means the output is wrong.
-    virtual std::vector<int> &&compile(const std::string &src, const std::vector<std::string> &input,
+    virtual std::vector<int> compile(const std::string &src, const std::vector<std::string> &input,
                                         const std::vector<std::string> &output, const Limitation &limitation) = 0;
 };
 } // namespace npuboj

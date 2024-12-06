@@ -21,8 +21,8 @@ class SimpleCompileStrategy : public CompileStrategy
     /// @return The validatity of the source code
     virtual bool validate() = 0;
 
-    virtual std::vector<Result> &&compile(const std::string &src, std::vector<std::string> &input, const Limitation &limitation) = 0;
-    virtual std::vector<int> &&compile(const std::string &src, const std::vector<std::string> &input,
+    virtual std::vector<Result> compile(const std::string &src, std::vector<std::string> &input, const Limitation &limitation) = 0;
+    virtual std::vector<int> compile(const std::string &src, const std::vector<std::string> &input,
                                         const std::vector<std::string> &output, const Limitation &limitation) = 0;
 };
 

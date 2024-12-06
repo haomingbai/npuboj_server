@@ -1,7 +1,7 @@
 #include "c_compile_strategy.h"
+#include <absl/log/check.h>
 #include <boost/filesystem.hpp>
 #include <boost/process.hpp>
-#include <fmt/ranges.h>
 #include <fstream>
 #include <istream>
 #include <mutex>
@@ -11,6 +11,8 @@
 #include <sandboxed_api/sandbox2/policy.h>
 #include <sandboxed_api/sandbox2/policybuilder.h>
 #include <sandboxed_api/sandbox2/sandbox2.h>
+#include <unistd.h>
+#include <exception>
 
 using namespace npuboj;
 using namespace std;
@@ -52,8 +54,8 @@ CCompilerStrategy::CCompilerStrategy(string &path, string &cc) : SimpleCompileSt
     }
 }
 
-std::vector<Result> &&CCompilerStrategy::compile(const std::string &src, const std::vector<std::string> &input,
-                                                 const Limitation &limitation)
+std::vector<Result> CCompilerStrategy::compile(const std::string &src, const std::vector<std::string> &input,
+                                               const Limitation &limitation)
 {
     // Lock the mutex
     lock_guard<mutex> lock(this->mtx);
@@ -82,40 +84,112 @@ std::vector<Result> &&CCompilerStrategy::compile(const std::string &src, const s
             err += tmp;
         }
         results.emplace_back(-1, "", err);
-        return move(results);
+        return (results);
     }
 
     // Run the program
-    for (auto &&in : input)
+    try{
+        for (size_t i = 0; i < input.size(); i++)
+        {
+            // Create the executor
+            vector<string> args;
+            args.push_back(this->path + "/a.out");
+            auto executor = absl::make_unique<sandbox2::Executor>(this->path + "/a.out", args);
+            executor->limits()
+                ->set_rlimit_as(((unsigned long long)limitation.memory) << 20)
+                .set_rlimit_cpu(limitation.time)
+                .set_walltime_limit(absl::Seconds(limitation.time));
+
+            // The input of the program
+            int pipe_stdin_fd[2];
+            if (pipe(pipe_stdin_fd) == -1)
+            {
+                std::runtime_error err("Unable to create a new pipe!");
+            }
+            write(pipe_stdin_fd[1], input.at(i).c_str(), input.at(i).length());
+            close(pipe_stdin_fd[1]);
+            executor->ipc()->MapFd(pipe_stdin_fd[0], STDIN_FILENO);
+
+            // The output of the program
+            int pipe_stdout_fd[2];
+            if (pipe(pipe_stdout_fd) == -1)
+            {
+                std::runtime_error err("Unable to create a new pipe!");
+            }
+            executor->ipc()->MapFd(pipe_stdout_fd[1], STDOUT_FILENO);
+
+            // The error of the program
+            int pipe_stderr_fd[2];
+            if (pipe(pipe_stderr_fd) == -1)
+            {
+                std::runtime_error err("Unable to create a new pipe!");
+            }
+            executor->ipc()->MapFd(pipe_stderr_fd[1], STDERR_FILENO);
+            
+            // Default policy
+            auto policy = sandbox2::PolicyBuilder().BuildOrDie();
+
+            // Create the sandbox
+            sandbox2::Sandbox2 sandbox(move(executor), move(policy));
+
+            // Run the sandbox
+            auto run_result = sandbox.Run();
+
+            // Get the result
+            string std_out, std_err;
+            char buffer[4096];
+            ssize_t n;
+            while ((n = read(pipe_stdout_fd[0], buffer, sizeof(buffer))) > 0)
+            {
+                std_out.append(buffer, n);
+            }
+            while ((n = read(pipe_stderr_fd[0], buffer, sizeof(buffer))) > 0)
+            {
+                std_err.append(buffer, n);
+            }
+
+            // Close the file descriptor
+            close(pipe_stdout_fd[0]);
+            close(pipe_stderr_fd[0]);
+
+            auto err_code = run_result.final_status();
+            if (err_code != sandbox2::Result::OK)
+            {
+                results.emplace_back(0, std_out, std_err);
+            }
+            else
+            {
+                if (err_code == sandbox2::Result::TIMEOUT)
+                {
+                    results.emplace_back(1, std_out, std_err);
+                }
+                else
+                {
+                    int reason_code = run_result.reason_code();
+                    if (reason_code == sandbox2::Result::FAILED_LIMITS)
+                    {
+                        results.emplace_back(2, std_out, std_err);
+                    }
+                    else
+                    {
+                        results.emplace_back(3, std_out, std_err);
+                    }
+                }
+            }
+        }
+    } catch(std::exception &e)
     {
-        auto executor = absl::make_unique<sandbox2::Executor>(this->path + "/a.out");
-        executor->limits()->set_rlimit_as(((unsigned long long)limitation.memory) << 20);
-        executor->limits()->set_rlimit_cpu(limitation.time);
-        executor->limits()->set_walltime_limit(absl::Seconds(limitation.time));
-        auto policy = sandbox2::PolicyBuilder().BuildOrDie();
-
-        sandbox2::Sandbox2 sandbox(move(executor), move(policy));
-
-        if (sandbox.RunAsync())
-        {
-            sandbox.comms()->SendString(in);
-
-            auto result = sandbox.AwaitResult();
-            string out;
-            sandbox.comms()->RecvString(&out);
-            results.emplace_back(result.final_status() - 1, out, result.ToString());
-        }
-        else
-        {
-            results.emplace_back(3, "", "The program is killed.");
-        }
+        string err = e.what() + '\n';
+        clog << err;
+        results.clear();
+        results.emplace_back(-2, "", err);
     }
 
-    return move(results);
+    return results;
 };
 
-vector<int> &&CCompilerStrategy::compile(const string &src, const vector<string> &input, const vector<string> &output,
-                                         const Limitation &limitation)
+vector<int> CCompilerStrategy::compile(const string &src, const vector<string> &input, const vector<string> &output,
+                                       const Limitation &limitation)
 {
     auto res = this->compile(src, input, limitation);
     int status = 0;
@@ -143,7 +217,7 @@ vector<int> &&CCompilerStrategy::compile(const string &src, const vector<string>
         {
             auto v = i.std_out | std::views::split('\n') |
                      std::views::transform([](auto word) { return std::string(word.begin(), word.end()); });
-            
+
             vector<string> output_vec(v.begin(), v.end());
 
             for (auto &str : output_vec)
@@ -153,7 +227,6 @@ vector<int> &&CCompilerStrategy::compile(const string &src, const vector<string>
                     str.pop_back();
                 }
             }
-            
         }
     }
 }
